@@ -1,4 +1,3 @@
-"""
 This URL configuration defines the authentication and API documentation routes
 for the Base User module in a Django REST Framework project.
 
@@ -10,6 +9,5 @@ It includes endpoints for:
 
 Swagger and ReDoc provide interactive API documentation for easier development
 and integration.
-"""
 
 ![BASE-USER-DJANGO](https://github.com/user-attachments/assets/153fab7d-f443-4a41-82cc-9c3daa27ce67)
