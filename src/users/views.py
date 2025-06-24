@@ -20,6 +20,13 @@ from .serializers import (
 
 from rest_framework.authentication import TokenAuthentication
 
+from allauth.socialaccount.providers.google.views import GoogleOAuth2Adapter
+from allauth.socialaccount.providers.oauth2.client import OAuth2Client
+from dj_rest_auth.registration.views import SocialLoginView
+from allauth.socialaccount.providers.facebook.views import FacebookOAuth2Adapter
+from allauth.socialaccount.providers.twitter.views import TwitterOAuthAdapter
+from dj_rest_auth.social_serializers import TwitterLoginSerializer
+
 # ======================AUTHENTICATION========================================
 
 @api_view(["POST"])
@@ -79,3 +86,67 @@ def logout_view(request):
     logout(request)
     return Response({"success": "Logged out successfully"})
 
+class FacebookLogin(SocialLoginView):
+    adapter_class = FacebookOAuth2Adapter
+
+class TwitterLogin(SocialLoginView):
+    adapter_class = TwitterOAuthAdapter
+    serializer_class = TwitterLoginSerializer
+
+class GoogleLogin(SocialLoginView):
+    adapter_class = GoogleOAuth2Adapter
+    callback_url = "http://localhost:8000/accounts/google/login/callback/"
+    client_class = OAuth2Client
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def social_auth(request):
+    provider = request.data.get('provider')
+    access_token = request.data.get('access_token')
+    token_secret = request.data.get('token_secret')  # For Twitter
+    
+    if not provider or not access_token:
+        return Response(
+            {'error': 'Provider and access token are required'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+    try:
+        if provider == 'google':
+            from allauth.socialaccount.providers.google.views import GoogleOAuth2Adapter
+            adapter = GoogleOAuth2Adapter(request)
+        elif provider == 'facebook':
+            from allauth.socialaccount.providers.facebook.views import FacebookOAuth2Adapter
+            adapter = FacebookOAuth2Adapter(request)
+        elif provider == 'twitter':
+            from allauth.socialaccount.providers.twitter.views import TwitterOAuthAdapter
+            adapter = TwitterOAuthAdapter(request)
+            # Twitter requires token_secret
+            if not token_secret:
+                return Response(
+                    {'error': 'Token secret is required for Twitter'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+        else:
+            return Response(
+                {'error': 'Invalid provider'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        token = adapter.complete_login(request, None, access_token, token_secret)
+        user = token.account.user
+        
+        # Generate or get existing token
+        from rest_framework.authtoken.models import Token
+        token, created = Token.objects.get_or_create(user=user)
+        
+        return Response({
+            'token': token.key,
+            'user': UserSerializer(user).data
+        })
+    
+    except Exception as e:
+        return Response(
+            {'error': str(e)},
+            status=status.HTTP_400_BAD_REQUEST
+        )

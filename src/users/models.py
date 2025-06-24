@@ -43,6 +43,11 @@ class User(AbstractUser):
     twitter = models.URLField(max_length=200, blank=True, null=True)
     linkedin = models.URLField(max_length=200, blank=True, null=True)
     phone = models.CharField(max_length=20, blank=True, null=True)
+    
+    # Social auth fields
+    social_provider = models.CharField(max_length=50, blank=True, null=True)
+    social_uid = models.CharField(max_length=255, blank=True, null=True)
+    social_extra_data = models.JSONField(blank=True, null=True)
 
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = ["first_name"]
@@ -57,4 +62,3 @@ class User(AbstractUser):
             random_number = random.randint(100, 999)
             self.username = f"{self.first_name}{self.last_name}{random_number}"
         super().save(*args, **kwargs)
-
